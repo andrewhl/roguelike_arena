@@ -1,12 +1,5 @@
 var ARENA = ARENA || {};
 
-var settings = {
-  FONT: 32, // default font size
-  ROWS: 10, // map dimensions
-  COLS: 15,
-  ACTORS: 15 // number of actors per level, including player
-};
-
 ARENA.namespace = function (ns_string) {
   var parts = ns_string.split('.'),
       parent = ARENA,
@@ -27,47 +20,66 @@ ARENA.namespace = function (ns_string) {
   return parent;
 };
 
-var ARENA = {
-  map: null,
-  screen: null, // the ascii display, as a 2d array of characters
-
-  // a list of all actors, 0 is the player
-  player: null,
-  actorList: null,
-  livingEnemies: null,
-
-  // points to each actor in its position, for quick searching
-  actorMap: null,
-
-  // initialize phaser, call create() once done
-  game: new Phaser.Game(settings.COLS * settings.FONT * 0.6, settings.ROWS * settings.FONT, Phaser.AUTO, null, {
-    create: create
-  }),
-
-  drawMap: function() {
-    for (var y = 0; y < settings.ROWS; y++)
-      for (var x = 0; x < settings.COLS; x++)
-        this.screen[y][x].content = this.map[y][x];
-  }
-
+ARENA.namespace('settings');
+ARENA.settings = {
+  FONT: 32, // default font size
+  ROWS: 10, // map dimensions
+  COLS: 15,
+  ACTORS: 15 // number of actors per level, including player
 };
 
+ARENA.namespace('properties');
+ARENA.properties = (function () {
+  return {
+    map: null,
+    screen: null, // the ascii display, as a 2d array of characters
+
+    // a list of all actors, 0 is the player
+    player: null,
+    actorList: null,
+    livingEnemies: null,
+
+    // points to each actor in its position, for quick searching
+    actorMap: null,
+
+    // initialize phaser, call create() once done
+    game: new Phaser.Game(ARENA.settings.COLS * ARENA.settings.FONT * 0.6, ARENA.settings.ROWS * ARENA.settings.FONT, Phaser.AUTO, null, {
+      create: create
+    }),
+    drawMap: function() {
+      for (var y = 0; y < ARENA.settings.ROWS; y++)
+        for (var x = 0; x < ARENA.settings.COLS; x++)
+          ARENA.properties.screen[y][x].content = this.map[y][x];
+    }
+  };
+})();
+
+
+
+ARENA.namespace('utilities');
+ARENA.utilities.numberUtils = (function () {
+  return {
+    randomInt: function(max) {
+      return Math.floor(Math.random() * max);
+    }
+  };
+}());
 
 
 
 function create() {
   // init keyboard commands
-  ARENA.game.input.keyboard.addCallbacks(null, null, onKeyUp);
+  ARENA.properties.game.input.keyboard.addCallbacks(null, null, onKeyUp);
 
   // initialize map
   initMap();
 
   // initialize screen
-  ARENA.screen = [];
-  for (var y = 0; y < settings.ROWS; y++) {
+  ARENA.properties.screen = [];
+  for (var y = 0; y < ARENA.settings.ROWS; y++) {
     var newRow = [];
-    ARENA.screen.push(newRow);
-    for (var x = 0; x < settings.COLS; x++)
+    ARENA.properties.screen.push(newRow);
+    for (var x = 0; x < ARENA.settings.COLS; x++)
       newRow.push(initCell('', x, y));
   }
 
@@ -75,45 +87,43 @@ function create() {
   initActors();
 
   // draw level
-  ARENA.drawMap();
+  ARENA.properties.drawMap();
   drawActors();
 }
 
 function initCell(chr, x, y) {
   // add a single cell in a given position to the ascii display
   var style = {
-    font: settings.FONT + "px monospace",
+    font: ARENA.settings.FONT + "px monospace",
     fill: "#fff"
   };
-  return ARENA.game.add.text(settings.FONT * 0.6 * x, settings.FONT * y, chr, style);
+  return ARENA.properties.game.add.text(ARENA.settings.FONT * 0.6 * x, ARENA.settings.FONT * y, chr, style);
 }
 
 function initMap() {
   // create a new random map
-  ARENA.map = [];
-  for (var y = 0; y < settings.ROWS; y++) {
+  ARENA.properties.map = [];
+  for (var y = 0; y < ARENA.settings.ROWS; y++) {
     var newRow = [];
-    for (var x = 0; x < settings.COLS; x++) {
+    for (var x = 0; x < ARENA.settings.COLS; x++) {
       if (Math.random() > 0.8)
         newRow.push('#');
       else
         newRow.push('.');
     }
-    ARENA.map.push(newRow);
+    ARENA.properties.map.push(newRow);
   }
 }
 
 
 
-function randomInt(max) {
-  return Math.floor(Math.random() * max);
-}
+
 
 function initActors() {
   // create actors at random locations
-  ARENA.actorList = [];
-  ARENA.actorMap = {};
-  for (var e = 0; e < settings.ACTORS; e++) {
+  ARENA.properties.actorList = [];
+  ARENA.properties.actorMap = {};
+  for (var e = 0; e < ARENA.settings.ACTORS; e++) {
     // create new actor
     var actor = {
       x: 0,
@@ -122,33 +132,33 @@ function initActors() {
     };
     do {
       // pick a random position that is both a floor and not occupied
-      actor.y = randomInt(settings.ROWS);
-      actor.x = randomInt(settings.COLS);
-    } while (ARENA.map[actor.y][actor.x] == '#' || ARENA.actorMap[actor.y + "_" + actor.x] != null);
+      actor.y = ARENA.utilities.numberUtils.randomInt(ARENA.settings.ROWS);
+      actor.x = ARENA.utilities.numberUtils.randomInt(ARENA.settings.COLS);
+    } while (ARENA.properties.map[actor.y][actor.x] == '#' || ARENA.properties.actorMap[actor.y + "_" + actor.x] != null);
 
     // add references to the actor to the actors list & map
-    ARENA.actorMap[actor.y + "_" + actor.x] = actor;
-    ARENA.actorList.push(actor);
+    ARENA.properties.actorMap[actor.y + "_" + actor.x] = actor;
+    ARENA.properties.actorList.push(actor);
   }
 
   // the player is the first actor in the list
-  ARENA.player = ARENA.actorList[0];
-  ARENA.livingEnemies = settings.ACTORS - 1;
+  ARENA.properties.player = ARENA.properties.actorList[0];
+  ARENA.properties.livingEnemies = ARENA.settings.ACTORS - 1;
 }
 
 function drawActors() {
-  for (var a in ARENA.actorList) {
-    if (ARENA.actorList[a] != null && ARENA.actorList[a].hp > 0)
-      ARENA.screen[ARENA.actorList[a].y][ARENA.actorList[a].x].content = a == 0 ? '' + ARENA.player.hp : 'e';
+  for (var a in ARENA.properties.actorList) {
+    if (ARENA.properties.actorList[a] != null && ARENA.properties.actorList[a].hp > 0)
+      ARENA.properties.screen[ARENA.properties.actorList[a].y][ARENA.properties.actorList[a].x].content = a == 0 ? '' + ARENA.properties.player.hp : 'e';
   }
 }
 
 function canGo(actor,dir) {
   return  actor.x+dir.x >= 0 &&
-      actor.x+dir.x <= settings.COLS - 1 &&
+      actor.x+dir.x <= ARENA.settings.COLS - 1 &&
       actor.y+dir.y >= 0 &&
-      actor.y+dir.y <= settings.ROWS - 1 &&
-      ARENA.map[actor.y+dir.y][actor.x +dir.x] == '.';
+      actor.y+dir.y <= ARENA.settings.ROWS - 1 &&
+      ARENA.properties.map[actor.y+dir.y][actor.x +dir.x] == '.';
 }
 
 function moveTo(actor, dir) {
@@ -159,70 +169,70 @@ function moveTo(actor, dir) {
   // moves actor to the new location
   var newKey = (actor.y + dir.y) +'_' + (actor.x + dir.x);
   // if the destination tile has an actor in it
-  if (ARENA.actorMap[newKey] != null) {
+  if (ARENA.properties.actorMap[newKey] != null) {
     //decrement hitpoints of the actor at the destination tile
-    var victim = ARENA.actorMap[newKey];
+    var victim = ARENA.properties.actorMap[newKey];
     victim.hp--;
 
     // if it's dead remove its reference
     if (victim.hp == 0) {
-      ARENA.actorMap[newKey]= null;
-      ARENA.actorList[ARENA.actorList.indexOf(victim)]=null;
-      if(victim!=ARENA.player) {
-        ARENA.livingEnemies--;
-        if (ARENA.livingEnemies == 0) {
+      ARENA.properties.actorMap[newKey]= null;
+      ARENA.properties.actorList[ARENA.properties.actorList.indexOf(victim)]=null;
+      if(victim!=ARENA.properties.player) {
+        ARENA.properties.livingEnemies--;
+        if (ARENA.properties.livingEnemies == 0) {
           // victory message
-          var victory = ARENA.game.add.text(ARENA.game.world.centerX, ARENA.game.world.centerY, 'Victory!\nCtrl+r to restart', { fill : '#2e2', align: "center" } );
+          var victory = ARENA.properties.game.add.text(ARENA.properties.game.world.centerX, ARENA.properties.game.world.centerY, 'Victory!\nCtrl+r to restart', { fill : '#2e2', align: "center" } );
           victory.anchor.setTo(0.5,0.5);
         }
       }
     }
   } else {
     // remove reference to the actor's old position
-    ARENA.actorMap[actor.y + '_' + actor.x]= null;
+    ARENA.properties.actorMap[actor.y + '_' + actor.x]= null;
 
     // update position
     actor.y+=dir.y;
     actor.x+=dir.x;
 
     // add reference to the actor's new position
-    ARENA.actorMap[actor.y + '_' + actor.x]=actor;
+    ARENA.properties.actorMap[actor.y + '_' + actor.x]=actor;
   }
   return true;
 }
 
 function onKeyUp(event) {
   // draw map to overwrite previous actors positions
-  ARENA.drawMap();
+  ARENA.properties.drawMap();
 
   // act on player input
   var acted = false;
   switch (event.keyCode) {
     case Phaser.Keyboard.LEFT:
-      acted = moveTo(ARENA.player, {x:-1, y:0});
+      acted = moveTo(ARENA.properties.player, {x:-1, y:0});
       break;
 
     case Phaser.Keyboard.RIGHT:
-      acted = moveTo(ARENA.player,{x:1, y:0});
+      acted = moveTo(ARENA.properties.player,{x:1, y:0});
       break;
 
     case Phaser.Keyboard.UP:
-      acted = moveTo(ARENA.player, {x:0, y:-1});
+      acted = moveTo(ARENA.properties.player, {x:0, y:-1});
       break;
 
     case Phaser.Keyboard.DOWN:
-      acted = moveTo(ARENA.player, {x:0, y:1});
+      acted = moveTo(ARENA.properties.player, {x:0, y:1});
       break;
   }
 
   // enemies act every time the player does
   if (acted)
-    for (var enemy in ARENA.actorList) {
+    for (var enemy in ARENA.properties.actorList) {
       // skip the player
       if(enemy==0)
         continue;
 
-      var e = ARENA.actorList[enemy];
+      var e = ARENA.properties.actorList[enemy];
       if (e != null)
         aiAct(e);
     }
@@ -233,13 +243,13 @@ function onKeyUp(event) {
 
 function aiAct(actor) {
   var directions = [ { x: -1, y:0 }, { x:1, y:0 }, { x:0, y: -1 }, { x:0, y:1 } ];
-  var dx = ARENA.player.x - actor.x;
-  var dy = ARENA.player.y - actor.y;
+  var dx = ARENA.properties.player.x - actor.x;
+  var dy = ARENA.properties.player.y - actor.y;
 
   // if player is far away, walk randomly
   if (Math.abs(dx) + Math.abs(dy) > 6)
     // try to walk in random directions until you succeed once
-    while (!moveTo(actor, directions[randomInt(directions.length)])) { };
+    while (!moveTo(actor, directions[ARENA.utilities.numberUtils.randomInt(directions.length)])) { };
 
   // otherwise walk towards player
   if (Math.abs(dx) > Math.abs(dy)) {
@@ -259,9 +269,9 @@ function aiAct(actor) {
       moveTo(actor, directions[3]);
     }
   }
-  if (ARENA.player.hp < 1) {
+  if (ARENA.properties.player.hp < 1) {
     // game over message
-    var gameOver = ARENA.game.add.text(ARENA.game.world.centerX, ARENA.game.world.centerY, 'Game Over\nCtrl+r to restart', { fill : '#e22', align: "center" } );
+    var gameOver = ARENA.properties.game.add.text(ARENA.game.world.centerX, ARENA.game.world.centerY, 'Game Over\nCtrl+r to restart', { fill : '#e22', align: "center" } );
     gameOver.anchor.setTo(0.5,0.5);
   }
 }
